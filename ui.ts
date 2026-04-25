@@ -74,7 +74,7 @@ export const UI_HTML = `<!DOCTYPE html>
   <div class="card">
     <div class="card-title">Wallet</div>
     <div id="wallet-disconnected">
-      <button class="btn-blue" id="btn-connect" onclick="connectVela()">
+      <button class="btn-blue" id="btn-connect" disabled>
         Connect Vela Wallet (Bluetooth)
       </button>
     </div>
@@ -83,7 +83,7 @@ export const UI_HTML = `<!DOCTYPE html>
         <span class="dot dot-green"></span>
         <span class="addr" id="wallet-addr"></span>
         <span class="chain-badge" id="wallet-chain"></span>
-        <button class="btn-outline btn-small" onclick="disconnectVela()">Disconnect</button>
+        <button class="btn-outline btn-small" id="btn-disconnect">Disconnect</button>
       </div>
     </div>
     <div id="wallet-connecting" class="hidden">
@@ -104,7 +104,7 @@ export const UI_HTML = `<!DOCTYPE html>
     </div>
     <div id="network-loading" class="hidden" style="font-size:0.8em; color:var(--orange); margin-bottom:8px;">Loading chain data...</div>
     <label>RPC</label>
-    <select id="rpc-select" onchange="onRpcSelect()">
+    <select id="rpc-select">
       <option value="">Select network first...</option>
     </select>
     <input id="rpc-url" type="text" placeholder="Or paste custom RPC URL..." style="font-size:0.82em;" />
@@ -116,7 +116,7 @@ export const UI_HTML = `<!DOCTYPE html>
   <div class="card">
     <div class="card-title">Deploy</div>
     <label>Contract</label>
-    <select id="contract-select" onchange="onContractChange()">
+    <select id="contract-select">
       <option value="">Select a contract...</option>
     </select>
 
@@ -124,18 +124,18 @@ export const UI_HTML = `<!DOCTYPE html>
 
     <label>Deploy Method</label>
     <div class="radio-group">
-      <label><input type="radio" name="deploy-method" value="create2" checked onchange="onMethodChange()"><span>CREATE2</span></label>
-      <label><input type="radio" name="deploy-method" value="create" onchange="onMethodChange()"><span>Traditional (CREATE)</span></label>
+      <label><input type="radio" name="deploy-method" value="create2" checked><span>CREATE2</span></label>
+      <label><input type="radio" name="deploy-method" value="create"><span>Traditional (CREATE)</span></label>
     </div>
 
     <div class="salt-row visible" id="salt-row">
       <label>Salt (bytes32)</label>
-      <input id="salt-input" type="text" value="0x0000000000000000000000000000000000000000000000000000000000000000" oninput="updatePredicted()" />
+      <input id="salt-input" type="text" value="0x0000000000000000000000000000000000000000000000000000000000000000" />
     </div>
 
     <div class="predicted" id="predicted-addr"></div>
 
-    <button class="btn-green" id="btn-deploy" onclick="deploy()" disabled>Deploy Contract</button>
+    <button class="btn-green" id="btn-deploy" disabled>Deploy Contract</button>
   </div>
 
   <!-- Verify -->
@@ -152,7 +152,7 @@ export const UI_HTML = `<!DOCTYPE html>
     </div>
     <label>Deployed Address</label>
     <input id="verify-address" type="text" placeholder="0x..." />
-    <button class="btn-orange" id="btn-verify" onclick="verifyContract()">Verify Contract</button>
+    <button class="btn-orange" id="btn-verify">Verify Contract</button>
   </div>
 
   <!-- Logs -->
@@ -199,7 +199,6 @@ function log(msg, type = 'info') {
   div.textContent = msg;
   area.prepend(div);
 }
-window.log = log;
 
 // ── Network search & loading ──
 let chainIndex = []; // { chainId, name, shortName, nativeCurrencySymbol }
@@ -345,7 +344,6 @@ function onRpcSelect() {
     $('rpc-url').focus();
   }
 }
-window.onRpcSelect = onRpcSelect;
 
 // ── Contract loading ──
 async function loadContracts() {
@@ -401,7 +399,6 @@ function onContractChange() {
 
   updatePredicted();
 }
-window.onContractChange = onContractChange;
 
 function getDeployMethod() {
   return document.querySelector('input[name="deploy-method"]:checked')?.value || 'create2';
@@ -412,7 +409,6 @@ function onMethodChange() {
   $('salt-row').classList.toggle('visible', method === 'create2');
   updatePredicted();
 }
-window.onMethodChange = onMethodChange;
 
 function getInitCode() {
   const c = getSelectedContract();
@@ -461,7 +457,6 @@ function updatePredicted() {
     el.classList.remove('visible');
   }
 }
-window.updatePredicted = updatePredicted;
 
 // ── Vela Web Bluetooth ──
 
@@ -525,7 +520,6 @@ async function connectVela() {
     setWalletDisconnected();
   }
 }
-window.connectVela = connectVela;
 
 function disconnectVela() {
   if (bleDevice?.gatt?.connected) {
@@ -533,7 +527,6 @@ function disconnectVela() {
   }
   setWalletDisconnected();
 }
-window.disconnectVela = disconnectVela;
 
 function setWalletConnected() {
   $('wallet-disconnected').classList.add('hidden');
@@ -696,7 +689,6 @@ async function deploy() {
     $('btn-deploy').textContent = 'Deploy Contract';
   }
 }
-window.deploy = deploy;
 
 async function deployCreate2(initCode, rpcUrl) {
   const salt = $('salt-input').value.trim();
@@ -846,7 +838,6 @@ async function verifyContract() {
     $('btn-verify').textContent = 'Verify Contract';
   }
 }
-window.verifyContract = verifyContract;
 
 // Toggle etherscan key row based on verifier selection
 document.querySelectorAll('input[name="verify-target"]').forEach(r => {
@@ -856,8 +847,23 @@ document.querySelectorAll('input[name="verify-target"]').forEach(r => {
   });
 });
 
-// ── Init ──
+// ── Init & event binding ──
 async function init() {
+  // Bind all events (no inline onclick needed)
+  $('btn-connect').addEventListener('click', connectVela);
+  $('btn-disconnect').addEventListener('click', disconnectVela);
+  $('btn-deploy').addEventListener('click', deploy);
+  $('btn-verify').addEventListener('click', verifyContract);
+  $('rpc-select').addEventListener('change', onRpcSelect);
+  $('contract-select').addEventListener('change', onContractChange);
+  $('salt-input').addEventListener('input', updatePredicted);
+  document.querySelectorAll('input[name="deploy-method"]').forEach(r => {
+    r.addEventListener('change', onMethodChange);
+  });
+
+  // Enable connect button now that JS is ready
+  $('btn-connect').disabled = false;
+
   // Load project info
   try {
     const resp = await fetch('/api/info');
