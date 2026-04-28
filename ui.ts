@@ -207,8 +207,7 @@ async function loadChainIndex() {
   try {
     const resp = await fetch('https://ethereum-data.awesometools.dev/index/fuse-chains.json');
     const data = await resp.json();
-    // Fuse index may wrap items; extract the list
-    chainIndex = Array.isArray(data) ? data : (data.list || data.items || []);
+    chainIndex = Array.isArray(data) ? data : (data.data || []);
     log('Loaded ' + chainIndex.length + ' networks', 'info');
   } catch (e) {
     log('Failed to load chain index: ' + e.message, 'warn');
